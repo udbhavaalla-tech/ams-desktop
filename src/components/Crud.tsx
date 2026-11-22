@@ -6,6 +6,8 @@ export type Field = {
   type?: 'text' | 'number' | 'date' | 'datetime-local' | 'time' | 'textarea' | 'select' | 'checkbox';
   options?: Array<{ value: string | number; label: string }>;
   required?: boolean;
+  placeholder?: string;
+  defaultValue?: string | number | boolean;
 };
 
 export function Crud({
@@ -43,7 +45,10 @@ export function Crud({
 
   function initialValues(row?: any) {
     const values: Record<string, unknown> = {};
-    for (const field of fields) values[field.name] = row?.[field.name] ?? (field.type === 'checkbox' ? 1 : '');
+    for (const field of fields) {
+      values[field.name] = row?.[field.name] ??
+        (field.type === 'checkbox' ? (field.defaultValue ? 1 : 0) : (field.defaultValue ?? ''));
+    }
     return values;
   }
 
@@ -96,12 +101,12 @@ export function Crud({
           <thead><tr>{fields.map(field => <th key={field.name}>{field.label}</th>)}
             {renderExtra && <th>Details</th>}<th>Actions</th></tr></thead>
           <tbody>{rows.map(row => (
-            <tr key={row.id}>{fields.map(field => <td key={field.name}>
+            <tr key={row.id} data-id={row.id}>{fields.map(field => <td key={field.name}>
               {field.type === 'checkbox' ? (row[field.name] ? 'Yes' : 'No') : String(row[field.name] ?? '—')}
             </td>)}
             {renderExtra && <td>{renderExtra(row)}</td>}
             <td className="row-actions">
-              <button className="ghost" onClick={() => { setEditing(row); setOpen(true); }}>Edit</button>
+              <button className="ghost" data-edit-id={row.id} onClick={() => { setEditing(row); setOpen(true); }}>Edit</button>
               <button className="danger" onClick={() => void remove(row)}>Delete</button>
             </td></tr>
           ))}</tbody>
@@ -119,7 +124,7 @@ export function Crud({
                     <option value="">Select...</option>{field.options?.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select> :
                   field.type === 'checkbox' ? <input name={field.name} type="checkbox" defaultChecked={Boolean(values[field.name])} /> :
-                  <input name={field.name} type={field.type || 'text'} required={field.required} defaultValue={String(values[field.name] ?? '')} />}
+                  <input name={field.name} type={field.type || 'text'} required={field.required} placeholder={field.placeholder} defaultValue={String(values[field.name] ?? field.defaultValue ?? '')} />}
               </label>
             ))}</div>
             <div className="modal-actions"><button type="button" className="ghost" onClick={() => setOpen(false)}>Cancel</button><button className="primary" type="submit">Save</button></div>

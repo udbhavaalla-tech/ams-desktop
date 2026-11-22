@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { app } from 'electron';
 import initSqlJs, { Database, SqlJsStatic, type SqlValue } from 'sql.js';
-import { migrations } from '../src/shared/schema';
+import { migrations, initialAcademicProfilePreset } from '../src/shared/schema';
 
 const ENTITY_COLUMNS: Record<string, string[]> = {
   programmes: ['name', 'code', 'description', 'start_date', 'end_date', 'status'],
@@ -45,6 +45,26 @@ export class AmsDatabase {
     }
     this.db.run('PRAGMA foreign_keys = ON');
     this.runMigrations();
+    this.seedInitialProfileIfEmpty();
+  }
+
+  private seedInitialProfileIfEmpty(): void {
+    const result = this.db.exec('SELECT COUNT(*) FROM programmes');
+    if (!result.length || Number(result[0].values[0][0]) === 0) {
+      try {
+        this.db.run('BEGIN');
+        this.db.run(initialAcademicProfilePreset);
+        this.db.run("INSERT OR IGNORE INTO schema_migrations (id, name) VALUES (3, 'seed_personal_academic_profile')");
+        this.db.run('COMMIT');
+        this.persist();
+      } catch (error) {
+        this.db.run('ROLLBACK');
+        throw error;
+      }
+    } else {
+      this.db.run("INSERT OR IGNORE INTO schema_migrations (id, name) VALUES (3, 'seed_personal_academic_profile')");
+      this.persist();
+    }
   }
 
   private runMigrations(): void {
