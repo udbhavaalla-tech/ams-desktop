@@ -1,10 +1,13 @@
 import { app, BrowserWindow, ipcMain, dialog, Notification } from 'electron';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { AmsDatabase } from './database';
+import { advanceReminderSchedule } from '../src/shared/business';
 
 let win: BrowserWindow | null = null;
 let database: AmsDatabase;
 let startupError = '';
+let reminderTimer: NodeJS.Timeout | null = null;
 
 async function createWindow(): Promise<void> {
   win = new BrowserWindow({
@@ -68,6 +71,58 @@ function registerIpc(): void {
   });
 }
 
+function startReminderScheduler(): void {
+  if (!database || reminderTimer) return;
+
+  const checkDueReminders = () => {
+    if (!Notification.isSupported()) return;
+    const now = new Date();
+    for (const reminder of database.list('reminders', 'scheduled_at ASC') as Array<Record<string, unknown>>) {
+      if (reminder.completed === 1 || reminder.notification_id) continue;
+      const scheduledAt = typeof reminder.scheduled_at === 'string'
+        ? new Date(reminder.scheduled_at)
+        : null;
+      if (!scheduledAt || isNaN(scheduledAt.getTime()) || scheduledAt > now) continue;
+
+      const title = String(reminder.title || 'Academic Reminder');
+      const body = String(reminder.message || 'You have an upcoming academic reminder.');
+      new Notification({ title, body }).show();
+
+      const recurrence = String(reminder.recurrence || 'once');
+      if (recurrence === 'once') {
+        database.update('reminders', Number(reminder.id), {
+          completed: 1,
+          notification_id: randomUUID(),
+        });
+        continue;
+      }
+
+      let next = advanceReminderSchedule(scheduledAt.toISOString(), recurrence);
+      const until = typeof reminder.until_at === 'string' ? new Date(reminder.until_at) : null;
+      let steps = 0;
+      while (next && new Date(next) <= now && (!until || new Date(next) <= until) && steps < 10000) {
+        next = advanceReminderSchedule(next, recurrence);
+        steps += 1;
+      }
+      if (!next || (until && new Date(next) > until)) {
+        database.update('reminders', Number(reminder.id), {
+          completed: 1,
+          notification_id: randomUUID(),
+        });
+      } else {
+        database.update('reminders', Number(reminder.id), {
+          scheduled_at: next,
+          completed: 0,
+          notification_id: null,
+        });
+      }
+    }
+  };
+
+  checkDueReminders();
+  reminderTimer = setInterval(checkDueReminders, 30_000);
+}
+
 app.whenReady().then(async () => {
   try {
     database = new AmsDatabase();
@@ -76,6 +131,7 @@ app.whenReady().then(async () => {
     startupError = error instanceof Error ? error.message : 'Unknown database initialization error';
   }
   registerIpc();
+  startReminderScheduler();
   await createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) void createWindow();
@@ -86,4 +142,7 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('before-quit', () => database?.close());
+app.on('before-quit', () => {
+  if (reminderTimer) clearInterval(reminderTimer);
+  database?.close();
+});

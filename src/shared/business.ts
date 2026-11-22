@@ -65,6 +65,20 @@ export function calculateReminderOccurrences(
   return occurrences;
 }
 
+export function advanceReminderSchedule(
+  scheduledAt: string,
+  recurrence: string,
+): string | null {
+  if (recurrence === 'once') return null;
+  const next = new Date(scheduledAt);
+  if (isNaN(next.getTime())) return null;
+  if (recurrence === 'daily') next.setDate(next.getDate() + 1);
+  else if (recurrence === 'weekly') next.setDate(next.getDate() + 7);
+  else if (recurrence === 'monthly') next.setMonth(next.getMonth() + 1);
+  else return null;
+  return next.toISOString();
+}
+
 export function analyticsFromRecords(records: {
   studySessions: Array<{ duration_minutes: number; subject_id: number | null; started_at: string }>;
   tasks: Array<{ status: string; priority: string }>;

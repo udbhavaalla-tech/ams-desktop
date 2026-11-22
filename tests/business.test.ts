@@ -8,6 +8,7 @@ import {
   calculateSyllabusCompletion,
   detectOverlap,
   elapsedSeconds,
+  advanceReminderSchedule,
 } from '../src/shared/business';
 import { migrations } from '../src/shared/schema';
 
@@ -45,6 +46,16 @@ describe('business rules', () => {
       new Date('2026-11-25T09:00:00.000Z'),
     );
     expect(occurrences).toHaveLength(4);
+  });
+
+  it('advances recurring reminder schedules by day, week or month', () => {
+    expect(advanceReminderSchedule('2026-11-22T09:00:00.000Z', 'daily'))
+      .toBe('2026-11-23T09:00:00.000Z');
+    expect(advanceReminderSchedule('2026-11-22T09:00:00.000Z', 'weekly'))
+      .toBe('2026-11-29T09:00:00.000Z');
+    expect(advanceReminderSchedule('2026-11-22T09:00:00.000Z', 'monthly'))
+      .toBe('2026-12-22T09:00:00.000Z');
+    expect(advanceReminderSchedule('2026-11-22T09:00:00.000Z', 'once')).toBeNull();
   });
 
   it('persists wall-clock elapsed seconds excluding the caller-provided pause offset', () => {

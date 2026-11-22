@@ -60,7 +60,9 @@ export function Crud({
       if (field.type === 'checkbox') values[field.name] = form.has(field.name) ? 1 : 0;
       else {
         const raw = form.get(field.name)?.toString() ?? '';
-        values[field.name] = field.type === 'number' ? (raw === '' ? null : Number(raw)) : raw;
+        if (field.type === 'number') values[field.name] = raw === '' ? null : Number(raw);
+        else if (field.type === 'select') values[field.name] = raw === '' ? null : raw;
+        else values[field.name] = raw;
       }
     }
     try {
