@@ -1,0 +1,31 @@
+export const migrations: Array<[number, string, string]> = [
+  [1, 'initial_schema', `
+    CREATE TABLE IF NOT EXISTS programmes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, code TEXT, description TEXT, start_date TEXT, end_date TEXT, status TEXT NOT NULL DEFAULT 'active', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS semesters (id INTEGER PRIMARY KEY AUTOINCREMENT, programme_id INTEGER NOT NULL REFERENCES programmes(id) ON DELETE CASCADE, name TEXT NOT NULL, start_date TEXT, end_date TEXT, status TEXT NOT NULL DEFAULT 'active', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS subjects (id INTEGER PRIMARY KEY AUTOINCREMENT, semester_id INTEGER NOT NULL REFERENCES semesters(id) ON DELETE CASCADE, name TEXT NOT NULL, code TEXT, credits INTEGER NOT NULL DEFAULT 0, color TEXT NOT NULL DEFAULT '#4f46e5', description TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS units (id INTEGER PRIMARY KEY AUTOINCREMENT, subject_id INTEGER NOT NULL REFERENCES subjects(id) ON DELETE CASCADE, name TEXT NOT NULL, description TEXT, order_index INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS topics (id INTEGER PRIMARY KEY AUTOINCREMENT, unit_id INTEGER NOT NULL REFERENCES units(id) ON DELETE CASCADE, name TEXT NOT NULL, completed INTEGER NOT NULL DEFAULT 0 CHECK(completed IN (0,1)), notes TEXT, order_index INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS calendar_events (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, description TEXT, event_type TEXT NOT NULL DEFAULT 'event', start_at TEXT NOT NULL, end_at TEXT, all_day INTEGER NOT NULL DEFAULT 0, subject_id INTEGER REFERENCES subjects(id) ON DELETE SET NULL, location TEXT, recurrence TEXT NOT NULL DEFAULT 'none', color TEXT NOT NULL DEFAULT '#7c3aed', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, description TEXT, subject_id INTEGER REFERENCES subjects(id) ON DELETE SET NULL, due_at TEXT, priority TEXT NOT NULL DEFAULT 'medium', status TEXT NOT NULL DEFAULT 'pending', estimated_minutes INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS reminders (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, message TEXT, scheduled_at TEXT NOT NULL, recurrence TEXT NOT NULL DEFAULT 'once', until_at TEXT, completed INTEGER NOT NULL DEFAULT 0 CHECK(completed IN (0,1)), entity_type TEXT, entity_id INTEGER, notification_id TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS habits (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT, frequency TEXT NOT NULL DEFAULT 'daily', target INTEGER NOT NULL DEFAULT 1, color TEXT NOT NULL DEFAULT '#10b981', active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS habit_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, habit_id INTEGER NOT NULL REFERENCES habits(id) ON DELETE CASCADE, entry_date TEXT NOT NULL, completed INTEGER NOT NULL DEFAULT 0 CHECK(completed IN (0,1)), count INTEGER NOT NULL DEFAULT 0, notes TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(habit_id, entry_date));
+    CREATE TABLE IF NOT EXISTS study_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, subject_id INTEGER REFERENCES subjects(id) ON DELETE SET NULL, task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL, title TEXT NOT NULL, started_at TEXT NOT NULL, ended_at TEXT, duration_minutes INTEGER NOT NULL DEFAULT 0, elapsed_seconds INTEGER NOT NULL DEFAULT 0, notes TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS availability (id INTEGER PRIMARY KEY AUTOINCREMENT, day_of_week INTEGER NOT NULL CHECK(day_of_week BETWEEN 0 AND 6), start_time TEXT NOT NULL, end_time TEXT NOT NULL, label TEXT, available INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS timetable_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, subject_id INTEGER REFERENCES subjects(id) ON DELETE SET NULL, day_of_week INTEGER NOT NULL CHECK(day_of_week BETWEEN 0 AND 6), start_time TEXT NOT NULL, end_time TEXT NOT NULL, location TEXT, recurrence TEXT NOT NULL DEFAULT 'weekly', active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+  `],
+  [2, 'indexes', `
+    CREATE INDEX IF NOT EXISTS idx_semesters_programme ON semesters(programme_id);
+    CREATE INDEX IF NOT EXISTS idx_subjects_semester ON subjects(semester_id);
+    CREATE INDEX IF NOT EXISTS idx_units_subject ON units(subject_id);
+    CREATE INDEX IF NOT EXISTS idx_topics_unit ON topics(unit_id);
+    CREATE INDEX IF NOT EXISTS idx_events_start ON calendar_events(start_at);
+    CREATE INDEX IF NOT EXISTS idx_tasks_due ON tasks(due_at);
+    CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+    CREATE INDEX IF NOT EXISTS idx_reminders_scheduled ON reminders(scheduled_at);
+    CREATE INDEX IF NOT EXISTS idx_habit_entries_habit_date ON habit_entries(habit_id, entry_date);
+    CREATE INDEX IF NOT EXISTS idx_study_subject ON study_sessions(subject_id);
+    CREATE INDEX IF NOT EXISTS idx_timetable_day ON timetable_sessions(day_of_week);
+    CREATE INDEX IF NOT EXISTS idx_availability_day ON availability(day_of_week);
+  `],
+];
