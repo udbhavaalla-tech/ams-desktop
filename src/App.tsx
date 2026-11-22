@@ -313,7 +313,7 @@ function StudySessions() {
   const sessions = useRows('study_sessions', 'started_at DESC');
   const [subjectId, setSubjectId] = useState('');
   const [title, setTitle] = useState('');
-  const [running, setRunning] = useState(false);
+  const [running, setRunning] = useState(() => localStorage.getItem('ams-timer-running') === '1');
   const [elapsed, setElapsed] = useState(() => Number(localStorage.getItem('ams-timer-elapsed') || 0));
   const [elapsedBase, setElapsedBase] = useState(() => Number(localStorage.getItem('ams-timer-elapsed') || 0));
   const [startedAt, setStartedAt] = useState(() => Number(localStorage.getItem('ams-timer-started') || 0));
@@ -333,12 +333,15 @@ function StudySessions() {
     setStartedAt(now);
     localStorage.setItem('ams-timer-started', String(now));
     setRunning(true);
+    localStorage.setItem('ams-timer-running', '1');
   }
 
   function pause() {
     const value = elapsedSeconds(startedAt, Date.now(), elapsedBase);
     setElapsed(value);
+    setElapsedBase(value);
     setRunning(false);
+    localStorage.setItem('ams-timer-running', '0');
     localStorage.setItem('ams-timer-elapsed', String(value));
   }
 
@@ -362,6 +365,7 @@ function StudySessions() {
       setElapsedBase(0);
       setStartedAt(0);
       setRunning(false);
+      localStorage.setItem('ams-timer-running', '0');
       setTitle('');
       localStorage.removeItem('ams-timer-elapsed');
       localStorage.removeItem('ams-timer-started');
@@ -444,5 +448,31 @@ function Settings() {
 }
 
 export default function App() {
+  const [status, setStatus] = useState<{ ready: boolean; error: string } | null>(null);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.ams) {
+      setStatus({ ready: false, error: 'Electron bridge unavailable. AMS must be launched through the Electron desktop process; the database is never accessed directly by the renderer.' });
+      return;
+    }
+    void window.ams.getStatus()
+      .then(setStatus)
+      .catch(error => setStatus({
+        ready: false,
+        error: error instanceof Error ? error.message : 'Could not verify database startup.',
+      }));
+  }, []);
+
+  if (!status) return <div className="boot-state"><div className="loading">Initializing local database...</div></div>;
+  if (!status.ready) return (
+    <div className="boot-state">
+      <section className="boot-error">
+        <div className="empty-icon">!</div>
+        <h1>AMS could not start safely</h1>
+        <p>{status.error}</p>
+        <p>Close AMS, verify access to the application data folder, then relaunch. If the problem persists, restore from a verified SQLite backup.</p>
+        <button className="primary" onClick={() => window.location.reload()}>Retry startup</button>
+      </section>
+    </div>
+  );
   return <Layout />;
 }

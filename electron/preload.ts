@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('ams', {
+  getStatus: () => ipcRenderer.invoke('app:status'),
   db: {
     list: (entity: string, orderBy?: string) => ipcRenderer.invoke('db:list', entity, orderBy),
     get: (entity: string, id: number) => ipcRenderer.invoke('db:get', entity, id),

@@ -9,6 +9,7 @@
     "dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "tsc -b && vite build && electron-builder",
     "build:renderer": "tsc -b && vite build",
+    "lint": "tsc -b --pretty false",
     "test": "vitest run",
     "test:watch": "vitest"
   },

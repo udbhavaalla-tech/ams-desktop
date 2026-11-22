@@ -100,4 +100,26 @@ describe('SQLite migrations and repositories', () => {
     expect(db.exec("SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'idx_tasks_due'")[0].values[0][0]).toBe(1);
     db.close();
   });
+
+  it('preserves create, edit and delete changes across database export and reload', async () => {
+    const SQL = await initSqlJs({
+      locateFile: file => path.join(process.cwd(), 'node_modules', 'sql.js', 'dist', file),
+    });
+    const db = new SQL.Database();
+    db.run('CREATE TABLE IF NOT EXISTS programmes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)');
+    db.run('INSERT INTO programmes (name) VALUES (?)', ['Temporary Programme']);
+    db.run('UPDATE programmes SET name = ? WHERE id = 1', ['Edited Programme']);
+    const exported = db.export();
+    db.close();
+
+    const restored = new SQL.Database(exported);
+    expect(restored.exec('SELECT name FROM programmes WHERE id = 1')[0].values[0][0]).toBe('Edited Programme');
+    restored.run('DELETE FROM programmes WHERE id = 1');
+    const deleted = restored.export();
+    restored.close();
+
+    const reloaded = new SQL.Database(deleted);
+    expect(reloaded.exec('SELECT COUNT(*) FROM programmes')[0].values[0][0]).toBe(0);
+    reloaded.close();
+  });
 });

@@ -1,4 +1,5 @@
 interface AmsApi {
+  getStatus(): Promise<{ ready: boolean; error: string }>;
   db: {
     list(entity: string, orderBy?: string): Promise<any[]>;
     get(entity: string, id: number): Promise<any>;

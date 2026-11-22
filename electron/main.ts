@@ -4,6 +4,7 @@ import { AmsDatabase } from './database';
 
 let win: BrowserWindow | null = null;
 let database: AmsDatabase;
+let startupError = '';
 
 async function createWindow(): Promise<void> {
   win = new BrowserWindow({
@@ -28,19 +29,27 @@ async function createWindow(): Promise<void> {
 }
 
 function registerIpc(): void {
-  ipcMain.handle('db:list', (_event, entity: string, orderBy?: string) => database.list(entity, orderBy));
-  ipcMain.handle('db:get', (_event, entity: string, id: number) => database.get(entity, id));
-  ipcMain.handle('db:create', (_event, entity: string, input: Record<string, unknown>) => database.create(entity, input));
-  ipcMain.handle('db:update', (_event, entity: string, id: number, input: Record<string, unknown>) => database.update(entity, id, input));
-  ipcMain.handle('db:delete', (_event, entity: string, id: number) => database.delete(entity, id));
-  ipcMain.handle('db:query', (_event, sql: string, params?: unknown[]) => database.custom(sql, params));
+  ipcMain.handle('app:status', () => ({
+    ready: !startupError && Boolean(database),
+    error: startupError,
+  }));
+  const requireDatabase = () => {
+    if (!database) throw new Error(startupError || 'Database is not initialized');
+    return database;
+  };
+  ipcMain.handle('db:list', (_event, entity: string, orderBy?: string) => requireDatabase().list(entity, orderBy));
+  ipcMain.handle('db:get', (_event, entity: string, id: number) => requireDatabase().get(entity, id));
+  ipcMain.handle('db:create', (_event, entity: string, input: Record<string, unknown>) => requireDatabase().create(entity, input));
+  ipcMain.handle('db:update', (_event, entity: string, id: number, input: Record<string, unknown>) => requireDatabase().update(entity, id, input));
+  ipcMain.handle('db:delete', (_event, entity: string, id: number) => requireDatabase().delete(entity, id));
+  ipcMain.handle('db:query', (_event, sql: string, params?: unknown[]) => requireDatabase().custom(sql, params));
   ipcMain.handle('backup:create', async () => {
     const result = await dialog.showSaveDialog(win!, {
       defaultPath: `ams-backup-${new Date().toISOString().slice(0, 10)}.sqlite`,
       filters: [{ name: 'SQLite Backup', extensions: ['sqlite'] }],
     });
     if (result.canceled || !result.filePath) return null;
-    database.backup(result.filePath);
+    requireDatabase().backup(result.filePath);
     return result.filePath;
   });
   ipcMain.handle('backup:restore', async () => {
@@ -49,7 +58,7 @@ function registerIpc(): void {
       filters: [{ name: 'SQLite Backup', extensions: ['sqlite'] }],
     });
     if (result.canceled || !result.filePaths[0]) return null;
-    database.restore(result.filePaths[0]);
+    requireDatabase().restore(result.filePaths[0]);
     return result.filePaths[0];
   });
   ipcMain.handle('notify', (_event, title: string, body: string) => {
@@ -60,8 +69,12 @@ function registerIpc(): void {
 }
 
 app.whenReady().then(async () => {
-  database = new AmsDatabase();
-  await database.initialize();
+  try {
+    database = new AmsDatabase();
+    await database.initialize();
+  } catch (error) {
+    startupError = error instanceof Error ? error.message : 'Unknown database initialization error';
+  }
   registerIpc();
   await createWindow();
   app.on('activate', () => {

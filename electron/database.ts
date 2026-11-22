@@ -130,6 +130,7 @@ export class AmsDatabase {
     this.db.close();
     this.db = restored;
     this.db.run('PRAGMA foreign_keys = ON');
+    this.runMigrations();
     this.persist();
   }
 
