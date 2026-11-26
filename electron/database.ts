@@ -18,6 +18,12 @@ const ENTITY_COLUMNS: Record<string, string[]> = {
   study_sessions: ['subject_id', 'task_id', 'title', 'started_at', 'ended_at', 'duration_minutes', 'elapsed_seconds', 'notes'],
   availability: ['day_of_week', 'start_time', 'end_time', 'label', 'available'],
   timetable_sessions: ['title', 'subject_id', 'day_of_week', 'start_time', 'end_time', 'location', 'recurrence', 'active'],
+  ai_divisions: ['name', 'color', 'description'],
+  ai_tools: ['name', 'provider', 'category', 'model', 'access_type', 'modalities', 'capabilities', 'website', 'status', 'notes'],
+  ai_agents: ['name', 'avatar', 'tool_id', 'division_id', 'role', 'purpose', 'specialization', 'capabilities', 'modalities', 'status', 'system_prompt', 'notes', 'last_active_at'],
+  agent_tasks: ['title', 'description', 'project', 'division_id', 'agent_ids', 'tool_ids', 'priority', 'status', 'modality', 'due_at', 'started_at', 'completed_at', 'input_notes', 'output_result', 'handoff_instructions', 'review_notes'],
+  agent_activity: ['event_type', 'description', 'agent_id', 'task_id', 'division_id'],
+  work_sessions: ['title', 'status', 'started_at', 'last_resumed_at', 'paused_at', 'ended_at', 'elapsed_seconds', 'paused_seconds', 'task_id', 'agent_id', 'division_id', 'summary', 'notes', 'result'],
 };
 
 export class AmsDatabase {

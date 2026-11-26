@@ -28,6 +28,19 @@ export const migrations: Array<[number, string, string]> = [
     CREATE INDEX IF NOT EXISTS idx_timetable_day ON timetable_sessions(day_of_week);
     CREATE INDEX IF NOT EXISTS idx_availability_day ON availability(day_of_week);
   `],
+  [4, 'ai_agents_corner', `
+    CREATE TABLE IF NOT EXISTS ai_divisions (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, color TEXT NOT NULL DEFAULT '#6366f1', description TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS ai_tools (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, provider TEXT, category TEXT NOT NULL DEFAULT 'Other', model TEXT, access_type TEXT NOT NULL DEFAULT 'Other', modalities TEXT, capabilities TEXT, website TEXT, status TEXT NOT NULL DEFAULT 'active', notes TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS ai_agents (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, avatar TEXT, tool_id INTEGER REFERENCES ai_tools(id) ON DELETE SET NULL, division_id INTEGER REFERENCES ai_divisions(id) ON DELETE SET NULL, role TEXT, purpose TEXT, specialization TEXT, capabilities TEXT, modalities TEXT, status TEXT NOT NULL DEFAULT 'available', system_prompt TEXT, notes TEXT, last_active_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS agent_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, description TEXT, project TEXT, division_id INTEGER REFERENCES ai_divisions(id) ON DELETE SET NULL, agent_ids TEXT NOT NULL DEFAULT '[]', tool_ids TEXT NOT NULL DEFAULT '[]', priority TEXT NOT NULL DEFAULT 'medium', status TEXT NOT NULL DEFAULT 'inbox', modality TEXT, due_at TEXT, started_at TEXT, completed_at TEXT, input_notes TEXT, output_result TEXT, handoff_instructions TEXT, review_notes TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS agent_activity (id INTEGER PRIMARY KEY AUTOINCREMENT, event_type TEXT NOT NULL, description TEXT NOT NULL, agent_id INTEGER REFERENCES ai_agents(id) ON DELETE SET NULL, task_id INTEGER REFERENCES agent_tasks(id) ON DELETE SET NULL, division_id INTEGER REFERENCES ai_divisions(id) ON DELETE SET NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS work_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'running', started_at TEXT NOT NULL, last_resumed_at TEXT, paused_at TEXT, ended_at TEXT, elapsed_seconds INTEGER NOT NULL DEFAULT 0, paused_seconds INTEGER NOT NULL DEFAULT 0, task_id INTEGER REFERENCES agent_tasks(id) ON DELETE SET NULL, agent_id INTEGER REFERENCES ai_agents(id) ON DELETE SET NULL, division_id INTEGER REFERENCES ai_divisions(id) ON DELETE SET NULL, summary TEXT, notes TEXT, result TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE INDEX IF NOT EXISTS idx_ai_agents_division ON ai_agents(division_id);
+    CREATE INDEX IF NOT EXISTS idx_agent_tasks_status ON agent_tasks(status);
+    CREATE INDEX IF NOT EXISTS idx_agent_activity_created ON agent_activity(created_at);
+    CREATE INDEX IF NOT EXISTS idx_work_sessions_status ON work_sessions(status);
+    INSERT OR IGNORE INTO ai_divisions (name, color, description) VALUES ('Purple — Personal Development & Academics', '#8b5cf6', 'Academic learning, productivity, research and personal development.'), ('Yellow — Creative & Content Division', '#eab308', 'Content creation, design, video and creative projects.'), ('Green — One For Grind & Growth', '#22c55e', 'Organisation, growth, web development and business systems.');
+  `],
 ];
 
 export const initialAcademicProfilePreset = `

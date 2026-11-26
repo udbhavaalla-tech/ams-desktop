@@ -10,6 +10,7 @@ import Habits from './pages/Habits';
 import StudySessions from './pages/StudySessions';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
+import AIAgentsCorner from './pages/AIAgentsCorner';
 
 const navigation = [
   ['Dashboard', '/'],
@@ -22,6 +23,7 @@ const navigation = [
   ['Study Sessions', '/study'],
   ['Analytics', '/analytics'],
   ['Settings', '/settings'],
+  ['AI Agents Corner', '/ai-agents'],
 ];
 
 function Layout() {
@@ -77,6 +79,7 @@ function Layout() {
             <Route path="/study" element={<StudySessions />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/ai-agents" element={<AIAgentsCorner />} />
           </Routes>
         </div>
       </main>
